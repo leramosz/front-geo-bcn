@@ -11,7 +11,7 @@ interface Props {
 export function FountainSheet({ fountain, onClose }: Props) {
   const card = toCard(fountain);
   return (
-    <aside className="sheet" role="dialog" aria-label={`Ficha de ${card.name}`} data-testid="fountain-sheet">
+    <aside className="sheet-card" role="dialog" aria-label={`Ficha de ${card.name}`} data-testid="fountain-sheet">
       <header>
         <h2>{card.name}</h2>
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Cerrar ficha">

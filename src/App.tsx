@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Fountain } from './api/types';
 import { MAX_RADIUS, DEFAULT_RADIUS } from './api/client';
 import { FilterBar, areaName, type AreaSelection } from './components/FilterBar';
-import { FountainSheet } from './components/FountainSheet';
 import { NearbyPanel } from './components/NearbyPanel';
 import { fountainsLabel } from './domain/fountain';
 import type { LatLon } from './domain/geo';
@@ -77,6 +76,7 @@ export default function App() {
           userPosition={nearbyOpen ? origin : null}
           onMapClick={handleMapClick}
           onSelect={setSelected}
+          onClose={() => setSelected(null)}
           fitKey={data.loadedKey}
         />
 
@@ -100,7 +100,6 @@ export default function App() {
             onClose={() => setNearbyOpen(false)}
           />
         )}
-        {selected && <FountainSheet fountain={selected} onClose={() => setSelected(null)} />}
       </main>
     </div>
   );

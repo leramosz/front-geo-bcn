@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import L from 'leaflet';
 import 'leaflet.markercluster';
 import 'leaflet/dist/leaflet.css';
@@ -7,6 +8,8 @@ import 'leaflet.markercluster/dist/MarkerCluster.Default.css';
 import type { Fountain } from '../api/types';
 import { BCN_CENTER, toCard, toLatLng } from '../domain/fountain';
 import type { LatLon } from '../domain/geo';
+import { FountainSheet } from '../components/FountainSheet';
+import { markerIcon } from './icons';
 
 export interface FountainMapProps {
   fountains: Fountain[];
@@ -15,6 +18,8 @@ export interface FountainMapProps {
   /** Se invoca al pulsar un punto vacío del mapa. */
   onMapClick: (point: LatLon) => void;
   onSelect: (fountain: Fountain) => void;
+  /** Se invoca al cerrar el popup de la ficha. */
+  onClose: () => void;
   /** Cambia cuando hay que encajar el mapa en las fuentes visibles (cambio de filtro). */
   fitKey: string;
 }
@@ -22,20 +27,16 @@ export interface FountainMapProps {
 /** Radio (px) dentro del cual las fuentes se agrupan (CA5: 40 px). */
 export const CLUSTER_RADIUS_PX = 40;
 
-const dropIcon = L.divIcon({
-  className: 'fountain-marker',
-  html: '<span></span>',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-});
-
-export function FountainMap({ fountains, selected, userPosition, onMapClick, onSelect, fitKey }: FountainMapProps) {
+export function FountainMap({ fountains, selected, userPosition, onMapClick, onSelect, onClose, fitKey }: FountainMapProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const cluster = useRef<L.MarkerClusterGroup | null>(null);
   const userLayer = useRef<L.CircleMarker | null>(null);
-  const callbacks = useRef({ onMapClick, onSelect });
-  callbacks.current = { onMapClick, onSelect };
+  const markers = useRef(new Map<string, L.Marker>());
+  const popup = useRef<L.Popup | null>(null);
+  const [popupNode, setPopupNode] = useState<HTMLElement | null>(null);
+  const callbacks = useRef({ onMapClick, onSelect, onClose });
+  callbacks.current = { onMapClick, onSelect, onClose };
 
   useEffect(() => {
     if (!container.current || map.current) return;
@@ -68,10 +69,11 @@ export function FountainMap({ fountains, selected, userPosition, onMapClick, onS
     const group = cluster.current;
     if (!group) return;
     group.clearLayers();
+    markers.current.clear();
     group.addLayers(
       fountains.map((f) => {
         const marker = L.marker(toLatLng(f), {
-          icon: dropIcon,
+          icon: markerIcon(false),
           title: toCard(f).name,
           alt: `Fuente ${f.id}`,
           keyboard: true,
@@ -80,7 +82,7 @@ export function FountainMap({ fountains, selected, userPosition, onMapClick, onS
           L.DomEvent.stopPropagation(e);
           callbacks.current.onSelect(f);
         });
-        (marker as L.Marker & { fountainId?: string }).fountainId = f.id;
+        markers.current.set(f.id, marker);
         return marker;
       }),
     );
@@ -98,10 +100,47 @@ export function FountainMap({ fountains, selected, userPosition, onMapClick, onS
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey, fountains.length > 0]);
 
+  // Marcador seleccionado: cambia de color (clase `selected`).
+  const selectedId = selected?.id ?? null;
+  useEffect(() => {
+    const marker = selectedId ? markers.current.get(selectedId) : undefined;
+    marker?.setIcon(markerIcon(true));
+    return () => {
+      marker?.setIcon(markerIcon(false));
+    };
+  }, [selectedId, fountains]);
+
+  // Ficha como popup anclado al marcador, con la flechita apuntando a la fuente.
   useEffect(() => {
     const m = map.current;
     if (!m || !selected) return;
     m.setView(toLatLng(selected), Math.max(m.getZoom(), 17), { animate: false });
+    const node = document.createElement('div');
+    const p = L.popup({
+      className: 'fountain-popup',
+      closeButton: false,
+      closeOnClick: false,
+      autoClose: false,
+      autoPan: false,
+      minWidth: 240,
+      maxWidth: 300,
+      offset: [0, -8],
+    })
+      .setLatLng(toLatLng(selected))
+      .setContent(node);
+    p.on('remove', () => {
+      popup.current = null;
+      setPopupNode(null);
+    });
+    p.openOn(m);
+    popup.current = p;
+    setPopupNode(node);
+    return () => {
+      p.off('remove');
+      p.remove();
+      popup.current = null;
+      setPopupNode(null);
+    };
   }, [selected]);
 
   useEffect(() => {
@@ -123,5 +162,10 @@ export function FountainMap({ fountains, selected, userPosition, onMapClick, onS
     }
   }, [userPosition]);
 
-  return <div ref={container} className="map" data-testid="map" role="application" aria-label="Mapa de fuentes" />;
+  return (
+    <>
+      <div ref={container} className="map" data-testid="map" role="application" aria-label="Mapa de fuentes" />
+      {selected && popupNode && createPortal(<FountainSheet fountain={selected} onClose={() => callbacks.current.onClose()} />, popupNode)}
+    </>
+  );
 }

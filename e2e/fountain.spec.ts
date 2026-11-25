@@ -26,6 +26,43 @@ test.describe('KAN-7 · ficha de una fuente', () => {
     await expect(sheet.getByTestId('sheet-status')).toHaveText('No disponible');
   });
 
+  test('CA4 · la ficha es un popup anclado sobre el marcador, con la flechita apuntando a él', async ({ page }) => {
+    await openSantCarles(page);
+    const popup = page.locator('.fountain-popup');
+    await expect(popup).toBeVisible();
+    await expect(popup.getByTestId('fountain-sheet')).toBeVisible();
+
+    const marker = (await page.locator('.leaflet-marker-icon.selected').boundingBox())!;
+    const tip = (await popup.locator('.leaflet-popup-tip').boundingBox())!;
+    const box = (await popup.locator('.leaflet-popup-content-wrapper').boundingBox())!;
+    const markerCenterX = marker.x + marker.width / 2;
+    // La ficha queda por encima del marcador y su flechita está sobre él.
+    expect(box.y + box.height).toBeLessThanOrEqual(marker.y + 2);
+    expect(Math.abs(tip.x + tip.width / 2 - markerCenterX)).toBeLessThan(6);
+  });
+
+  test('CA4 · el marcador seleccionado cambia de color y los demás no', async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/');
+    await waitForMap(page);
+    await expect(page.getByTestId('count')).toHaveText('1.760 fuentes');
+    await setView(page, santCarles.location.latitude, santCarles.location.longitude, 19);
+
+    const color = (selector: string) =>
+      page.locator(selector).first().locator('span').evaluate((el) => getComputedStyle(el).backgroundColor);
+    const normal = await color('.leaflet-marker-icon.fountain-marker:not(.selected)');
+
+    await page.locator('.leaflet-marker-icon[title="Sant Carles"]').first().click();
+    await expect(page.locator('.leaflet-marker-icon.selected')).toHaveCount(1);
+    const selected = await color('.leaflet-marker-icon.selected');
+    expect(selected).not.toBe(normal);
+
+    // Al cerrar la ficha el marcador recupera su color.
+    await page.getByRole('button', { name: 'Cerrar ficha' }).click();
+    await expect(page.locator('.leaflet-marker-icon.selected')).toHaveCount(0);
+    await expect(page.locator('.leaflet-marker-icon[title="Sant Carles"]').first().locator('span')).toHaveCSS('background-color', normal);
+  });
+
   // CA5
   test('CA5 · cerrar con el botón o tocando fuera conserva posición y zoom', async ({ page }) => {
     await openSantCarles(page);

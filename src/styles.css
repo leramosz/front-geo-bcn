@@ -1,5 +1,6 @@
 :root {
   --primary: #0b6fa4;
+  --selected: #d93025;
   --bg: #fff;
   --fg: #14212b;
   --muted: #5b6b78;
@@ -24,12 +25,13 @@ select, .btn { font: inherit; padding: 6px 10px; border: 1px solid var(--border)
 .btn.primary[aria-pressed='true'] { outline: 3px solid color-mix(in srgb, var(--primary) 40%, transparent); }
 .stage { position: relative; flex: 1; min-height: 0; }
 .map { position: absolute; inset: 0; }
-.fountain-marker span { display: block; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--primary); border: 2px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 40%); }
-.sheet, .panel { position: absolute; z-index: 1000; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 20px rgb(0 0 0 / 25%); padding: 12px 16px; }
-.sheet { left: 16px; right: 16px; bottom: 16px; max-width: 420px; }
+.fountain-marker span { display: block; width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--primary); border: 2px solid #fff; box-shadow: 0 1px 4px rgb(0 0 0 / 40%); transition: background-color 0.15s; }
+.fountain-marker.selected { z-index: 1000 !important; }
+.fountain-marker.selected span { background: var(--selected); }
+.panel { position: absolute; z-index: 1000; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 20px rgb(0 0 0 / 25%); padding: 12px 16px; }
 .panel { left: 16px; top: 12px; width: min(360px, calc(100% - 32px)); max-height: 45%; overflow: auto; }
-.sheet header, .panel header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.sheet h2, .panel h2 { font-size: 16px; margin: 0; }
+.sheet-card header, .panel header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sheet-card h2, .panel h2 { font-size: 16px; margin: 0; }
 .icon-btn { border: 0; background: none; font-size: 24px; line-height: 1; cursor: pointer; color: var(--fg); padding: 4px 8px; }
 dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 8px 0 12px; }
 dt { color: var(--muted); }
@@ -42,7 +44,12 @@ dd { margin: 0; }
 .banner .btn { color: var(--fg); }
 @media (max-width: 600px) {
   .count { margin-left: 0; width: 100%; }
-  .sheet { max-width: none; }
   .panel { top: auto; bottom: 0; left: 0; right: 0; width: auto; border-radius: 12px 12px 0 0; max-height: 50%; }
-  .sheet { bottom: 0; left: 0; right: 0; border-radius: 12px 12px 0 0; }
 }
+
+/* Ficha como popup de Leaflet: la flechita (tip) apunta a la fuente. */
+.fountain-popup .leaflet-popup-content-wrapper { background: var(--bg); color: var(--fg); border-radius: 12px; padding: 0; }
+.fountain-popup .leaflet-popup-tip { background: var(--bg); }
+.fountain-popup .leaflet-popup-content { margin: 12px 16px; font: inherit; }
+.fountain-popup .sheet-card dl { margin: 8px 0 12px; }
+.fountain-popup .sheet-card .btn { width: 100%; text-align: center; }
